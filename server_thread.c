@@ -11,43 +11,33 @@
 #include <fcntl.h>
 #include <pthread.h>
 
-
-#define CONNMAX 1000
+#define CONNMAX 100
 
 int client[CONNMAX] = {-1, };
-int now = 0;
+int n = 0;
 
 char *ROOT;
 
-
-void* respond(void *arg);
+void* respond(void *socket);
 
 int main(int argc, char *argv[])
 {
-        int server_sock, client_sock;
-        int listenfd;
-        ssize_t len;
-        pid_t childpid;
-	
+        int server_sock, client_sock, listenfd;
 	pthread_mutex_t mutex;
 	pthread_t tid;
-        int n = 0, ret = 0;
 
-	pthread_mutex_init(&mutex, NULL);
+	pthread_mutex_init(&mutex, NULL);	// thread init	
+
+	ROOT = getenv("PWD");	// Get current loc
 	
-
-	ROOT = getenv("PWD");
-
+	printf("-----------------------KITAE'S WEB SERVER--------------------------\n");
 
         if(argc != 2)
         {
                 printf("Usage: ./Program Port\n");
                 exit(1);
         }
-        int port_num = atoi(argv[1]);
-	
-//	for(int i = 0; i < CONNMAX; i++){client_sock[i] = -1;}
-
+        int port_num = atoi(argv[1]);	// Get Port Num
 	
 	
         // Socket Creation Part
@@ -90,7 +80,7 @@ int main(int argc, char *argv[])
                 }
 				
 	//	pthread_mutex_lock(&mutex);
-	//	client[now++] = client_sock;
+	//	client[n++] = client_sock;
 	//	pthread_mutex_unlock(&mutex);
 
 		pthread_create(&tid, NULL, respond, (void*)&client_sock);
@@ -102,22 +92,24 @@ int main(int argc, char *argv[])
 }
 
 
-void * respond(void *arg)
+void * respond(void *socket)
 {
-	char msg[100000], *reqline[3], data_to_send[1024], path[99999];
+	char msg[100000], *reqline[3], data_to_send[1024], path[1000];
 	int rcvd, fd, bytes_read;
 	
-	int clnt_sock = *((int*)arg);
+	int clnt_sock = *((int*)socket);
 	
 	memset((void *)msg, 0, 10000);
 
 	rcvd = recv(clnt_sock, msg, 10000, 0);
 
-	if (rcvd<0) { printf("Receive Error\n"); }
-        else if (rcvd==0) { printf("Client Disconnected\n"); }
-        else    // Receive Success
-        {
-                printf("%s\n", msg);
+	if (rcvd < 0){	// Receive Err.
+		printf("Receive Error\n");
+	} else if (rcvd==0){	// Disconnect
+		printf("Client Disconnected\n");
+	} else {	// Parsing Data
+                
+		printf("%s\n", msg);
                 reqline[0] = strtok (msg, " \t\n");
                 
 		if ( strncmp(reqline[0], "GET\0", 4)==0 )
@@ -131,13 +123,13 @@ void * respond(void *arg)
                         else
                         {
                                 if ( strncmp(reqline[1], "/\0", 2)==0 )
-                                        reqline[1] = "/index.html";        //Because if no file is specified, index.html will be opened by default (like it happens in APACHE...
+                                        reqline[1] = "/index.html";
 
                                 strcpy(path, ROOT);
                                 strcpy(&path[strlen(ROOT)], reqline[1]);
-                                printf("file: %s\n\n\n\n", path);
+                                printf("\n\nSend File: %s\n\n\n\n", path);
 
-                                if ( (fd=open(path, O_RDONLY))!=-1 )    //FILE FOUND
+                                if ( (fd=open(path, O_RDONLY))!=-1 )    // FILE FOUND
                                 {
                                         send(clnt_sock, "HTTP/1.0 200 OK\n\n", 17, 0);
                                         while ( (bytes_read=read(fd, data_to_send, 1024))>0 )
@@ -149,5 +141,4 @@ void * respond(void *arg)
         }
 	shutdown(clnt_sock, SHUT_RDWR);
 	close(clnt_sock);
-	//clnt_sock = -1;
 }
