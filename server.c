@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
         pid_t childpid;
         int n = 0, ret = 0;
 	
+	printf("-----------------------KITAE'S WEB SERVER With Multi Process--------------------------\n");	
 
 	ROOT = getenv("PWD");
 
@@ -108,7 +109,7 @@ void respond(int n)
 
 	if (rcvd<0) { printf("Receive Error\n"); }
         else if (rcvd==0) { printf("Client Disconnected\n"); }
-        else    // Receive Success
+        else    
         {
                 printf("%s\n", msg);
                 reqline[0] = strtok (msg, " \t\n");
@@ -124,7 +125,7 @@ void respond(int n)
                         else
                         {
                                 if ( strncmp(reqline[1], "/\0", 2)==0 )
-                                        reqline[1] = "/index.html";        //Because if no file is specified, index.html will be opened by default (like it happens in APACHE...
+                                        reqline[1] = "/index.html";
 
                                 strcpy(path, ROOT);
                                 strcpy(&path[strlen(ROOT)], reqline[1]);
